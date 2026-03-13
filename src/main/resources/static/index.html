@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <title>CRUD de Produtos - Springboot</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; 
+            padding: 20px; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: #f5f5f5;
+        }
+        
+        h1, h2 { 
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .form-group { 
+            margin-bottom: 15px; 
+        }
+        
+        label { 
+            display: block; 
+            margin-bottom: 5px; 
+            font-weight: bold; 
+            color: #555;
+        }
+        
+        input, textarea { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        button { 
+            padding: 10px 20px; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        
+        button:hover { 
+            background: #0056b3; 
+        }
+        
+        button:disabled { 
+            background: #cccccc; 
+            cursor: not-allowed; 
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        
+        .produto { 
+            border: 1px solid #ddd; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 4px; 
+            background: #f9f9f9;
+        }
+        
+        .produto h3 { 
+            margin: 0 0 10px 0; 
+            color: #007bff; 
+        }
+        
+        .preco { 
+            color: #28a745; 
+            font-weight: bold; 
+            font-size: 1.0em; 
+        }
+        
+        .descricao {
+            color: #666;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 4px; 
+        }
+        
+        .sucesso { 
+            background: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+        }
+        
+        .erro { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb; 
+        }
+        
+        .info { 
+            background: #e7f3ff; 
+            color: #004085; 
+            border: 1px solid #b8daff; 
+        }
+        
+        .produto-actions {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .produto-actions button {
+            padding: 5px 10px;
+            font-size: 14px;
+            margin-right: 5px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            background: #007bff;
+            color: white;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CRUD integrado ao Java</h1>
+    
+    <!-- FORMULÁRIO DE CRIAÇÃO -->
+    <div class="container">
+        <h2>Criar Novo Produto</h2>
+        
+        <div class="form-group">
+            <label for="nome">Nome do Produto:</label>
+            <input type="text" id="nome" placeholder="Ex: iPhone 14" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="descricao">Descrição:</label>
+            <textarea id="descricao" rows="3" placeholder="Descreva o produto, mínimo de 20 caracteres"></textarea>
+            <small id="descricao-counter" style="color: #666;">0 caracteres</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="preco">Preço (R$):</label>
+            <input type="number" id="preco" step="0.01" min="0" placeholder="Ex: 99.99">
+        </div>
+        
+        <div>
+            <button onclick="criarProduto()" id="btn-salvar">Salvar Produto</button>
+            <button onclick="limparFormulario()" style="background: #6c757d;">Limpar Campos</button>
+        </div>
+    </div>
+    
+    <!-- STATUS -->
+    <div id="status" class="status info">Carregando produtos...</div>
+    
+    <!-- LISTA DE PRODUTOS -->
+    <div class="container">
+        <h2>Produtos Cadastrados</h2>
+        <button onclick="carregarProdutos()" style="margin-bottom: 15px;">Atualizar Lista</button>
+        <div id="produtos"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8080';  // Volta para URL completa
+        const API_URL = `${API_BASE_URL}/api`;
+
+           // ===== DEBUG =====
+    console.log('=== DIAGNÓSTICO ===');
+    console.log('URL atual:', window.location.href);
+    console.log('API_URL configurada:', API_URL);
+    console.log('Tentando acessar:', `${API_URL}/products`);
+    
+    // Testar conexão
+    async function testarConexao() {
+        try {
+            const response = await fetch(`${API_URL}/products`);
+            console.log('Status da resposta:', response.status);
+            if (response.ok) {
+                console.log('CONEXÃO OK!');
+            } else {
+                console.log('ERRO:', response.status, response.statusText);
+            }
+        } catch (error) {
+            console.log('FALHA NA CONEXÃO:', error.message);
+        }
+    }
+    
+    testarConexao();
+
+        
+        // ===========================================
+        // FUNÇÕES DE FORMATAÇÃO
+        // ===========================================
+
+        
+        function formatarPreco(preco) {
+            if (preco === null || preco === undefined) {
+                return 'R$ 0,00';
+            }
+            const valor = typeof preco === 'string' ? parseFloat(preco) : preco;
+            return isNaN(valor) ? 'R$ 0,00' : `R$ ${valor.toFixed(2).replace('.', ',')}`;
+        }
+        
+        function formatarDescricao(desc) {
+            if (!desc || desc.trim() === '') {
+                return '<em style="color: #999;">Nenhuma descrição fornecida</em>';
+            }
+            return desc;
+        }
+        
+        // ===========================================
+        // FUNÇÕES DE VALIDAÇÃO
+        // ===========================================
+        function validarNome() {
+            const nome = document.getElementById('nome').value.trim();
+            if (!nome) {
+                alert('Nome é obrigatório!');
+                return false;
+            }
+            return true;
+        }
+        
+        function validarDescricao() {
+            const desc = document.getElementById('descricao').value.trim();
+            if (desc.length < 20 && desc.length > 0) {
+                alert('Descrição deve ter no mínimo 20 caracteres se fornecida!');
+                return false;
+            }
+            return true;
+        }
+        
+        function validarPreco() {
+            const preco = parseFloat(document.getElementById('preco').value);
+            if (isNaN(preco) || preco < 0) {
+                alert('Preço deve ser um número positivo!');
+                return false;
+            }
+            return true;
+        }
+        
+        // ===========================================
+        // FUNÇÃO PARA CRIAR PRODUTO
+        // ===========================================
+        async function criarProduto() {
+            // Validar campos
+            if (!validarNome() || !validarDescricao() || !validarPreco()) {
+                return;
+            }
+            
+            const nome = document.getElementById('nome').value.trim();
+            const descricao = document.getElementById('descricao').value.trim();
+            const preco = parseFloat(document.getElementById('preco').value);
+            
+            const novoProduto = {
+                name: nome,
+                description: descricao || "Descrição não fornecida",
+                price: preco
+            };
+            
+            console.log('Enviando produto:', novoProduto);
+            
+            const btnSalvar = document.getElementById('btn-salvar');
+            btnSalvar.disabled = true;
+            btnSalvar.textContent = 'Salvando...';
+            
+            try {
+                const response = await fetch(`${API_URL}/product`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(novoProduto)
+                });
+                
+                const responseData = await response.json();
+                console.log('Resposta:', response.status, responseData);
+                
+                if (!response.ok) {
+                    throw new Error(JSON.stringify(responseData));
+                }
+                
+                mostrarMensagem('Produto criado com sucesso!', 'sucesso');
+                limparFormulario();
+                carregarProdutos();
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarMensagem('Erro ao criar produto: ' + error.message, 'erro');
+            } finally {
+                btnSalvar.disabled = false;
+                btnSalvar.textContent = 'Salvar Produto';
+            }
+        }
+        
+        // ===========================================
+        // FUNÇÃO PARA CARREGAR PRODUTOS
+        // ===========================================
+        async function carregarProdutos() {
+            const statusDiv = document.getElementById('status');
+            const produtosDiv = document.getElementById('produtos');
+            
+            statusDiv.className = 'status info';
+            statusDiv.innerHTML = ' Carregando produtos...';
+            produtosDiv.innerHTML = '<p style="text-align: center;"> Aguarde...</p>';
+            
+            try {
+                const response = await fetch(`${API_URL}/products`);
+                
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+                
+                const produtos = await response.json();
+                console.log('Produtos recebidos:', produtos);
+                
+                if (!produtos || produtos.length === 0) {
+                    statusDiv.className = 'status info';
+                    statusDiv.innerHTML = 'Nenhum produto cadastrado!';
+                    produtosDiv.innerHTML = '<p style="text-align: center; color: #666;">Nenhum produto encontrado. Crie o primeiro produto!</p>';
+                    return;
+                }
+                
+                statusDiv.className = 'status sucesso';
+                statusDiv.innerHTML = `${produtos.length} produto(s) encontrado(s)`;
+                
+                let html = '';
+                produtos.forEach(prod => {
+                    html += `
+                        <div class="produto" id="produto-${prod.id}">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <h3>${prod.name || 'Sem nome'}</h3>
+                                <span class="badge">ID: ${prod.id}</span>
+                            </div>
+                            
+                            <div class="descricao">
+                                <strong>Descrição:</strong><br>
+                                ${formatarDescricao(prod.description)}
+                            </div>
+                            
+                            <p><strong>Preço:</strong> <span class="preco">${formatarPreco(prod.price)}</span></p>
+                            
+                            <div class="produto-actions">
+                                <button class="btn-warning" onclick="editarProduto(${prod.id})">Editar</button>
+                                <button class="btn-danger" onclick="deletarProduto(${prod.id})">Deletar</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                produtosDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Erro ao carregar:', error);
+                statusDiv.className = 'status erro';
+                statusDiv.innerHTML = 'Erro ao carregar produtos: ' + error.message;
+                produtosDiv.innerHTML = '<button onclick="carregarProdutos()" style="display: block; margin: 20px auto;">Tentar novamente</button>';
+            }
+        }
+        
+        // ===========================================
+        // FUNÇÃO PARA DELETAR PRODUTO
+        // ===========================================
+        async function deletarProduto(id) {
+            if (!confirm('Tem certeza que deseja deletar este produto?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/product/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+                
+                mostrarMensagem('Produto deletado com sucesso!', 'sucesso');
+                carregarProdutos();
+                
+            } catch (error) {
+                console.error('Erro ao deletar:', error);
+                mostrarMensagem('Erro ao deletar produto: ' + error.message, 'erro');
+            }
+        }
+        
+        // ===========================================
+        // FUNÇÃO PARA EDITAR PRODUTO
+        // ===========================================
+        async function editarProduto(id) {
+            const novoNome = prompt('Novo nome do produto:');
+            if (!novoNome) return;
+            
+            const novaDescricao = prompt('Nova descrição:');
+            if (!novaDescricao) return;
+            
+            const novoPreco = prompt('Novo preço:');
+            if (!novoPreco) return;
+            
+            const produtoAtualizado = {
+                name: novoNome,
+                description: novaDescricao,
+                price: parseFloat(novoPreco)
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/product/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(produtoAtualizado)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+                
+                mostrarMensagem('Produto atualizado com sucesso!', 'sucesso');
+                carregarProdutos();
+                
+            } catch (error) {
+                console.error('Erro ao editar:', error);
+                mostrarMensagem('Erro ao editar produto: ' + error.message, 'erro');
+            }
+        }
+        
+        // ===========================================
+        // FUNÇÕES AUXILIARES
+        // ===========================================
+        function mostrarMensagem(texto, tipo) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${tipo}`;
+            statusDiv.innerHTML = texto;
+            
+            setTimeout(() => {
+                if (statusDiv.className.includes(tipo)) {
+                    statusDiv.className = 'status info';
+                    statusDiv.innerHTML = 'Pronto para novas operações';
+                }
+            }, 5000);
+        }
+        
+        function limparFormulario() {
+            document.getElementById('nome').value = '';
+            document.getElementById('descricao').value = '';
+            document.getElementById('preco').value = '';
+            document.getElementById('descricao-counter').textContent = '0 caracteres';
+        }
+        
+        // Atualizar contador de caracteres
+        document.getElementById('descricao').addEventListener('input', function() {
+            const count = this.value.length;
+            const counter = document.getElementById('descricao-counter');
+            counter.textContent = `${count} caracteres`;
+            counter.style.color = count < 20 ? 'red' : '#666';
+        });
+        
+        // ===========================================
+        // INICIALIZAÇÃO
+        // ===========================================
+        window.onload = function() {
+            carregarProdutos();
+        };
+    </script>
+</body>
+</html>
